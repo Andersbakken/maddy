@@ -39,7 +39,7 @@ struct Scope {
 
 void analyze(const SourceFile &sourceFile)
 {
-    List<Scope> scopes;
+    std::vector<Scope> scopes;
     for (auto it = sourceFile.tokens.begin(); it != sourceFile.tokens.end(); ++it) {
         const Token &token = *it;
         if (token == '{') {
@@ -54,7 +54,7 @@ void analyze(const SourceFile &sourceFile)
                 ++it2;
             }
             if (it2 == sourceFile.tokens.end()) {
-                error() << "GOTTA DEAL WITH THIS";
+                fprintf(stderr, "GOTTA DEAL WITH THIS\n");
                 break;
             }
             Scope scope;
@@ -127,7 +127,7 @@ void analyze(const SourceFile &sourceFile)
                     }
                 }
             }
-            error() << "GOT A SCOPE AT" << Scope::typeToString(scope.type) << scope.range.toString() << scope.range.context();
+            printf("GOT A SCOPE AT: %s %s %s\n", Scope::typeToString(scope.type), scope.range.toString().c_str(), scope.range.context().c_str());
         }
     }
 }
@@ -135,14 +135,15 @@ void analyze(const SourceFile &sourceFile)
 int main(int argc, char **argv)
 {
     for (int i=1; i<argc; ++i) {
-        const Path p = argv[i];
-        if (!p.isFile()) {
-            fprintf(stderr, "Can't open %s for reading\n", argv[i]);;
+        bool ok;
+        const SourceFile sourceFile = SourceFile::create(argv[i], &ok);
+        if (!ok) {
+            fprintf(stderr, "Can't open %s for reading\n", argv[i]);
             return 1;
         }
-        const SourceFile sourceFile = SourceFile::create(p);
+
         for (const Token &token : sourceFile.tokens) {
-            error() << token.toString() << token.context();
+            printf("%s\n", token.toString().c_str());
         }
 
         analyze(sourceFile);

@@ -20,27 +20,11 @@
 #include <vector>
 #include <stdint.h>
 #include <assert.h>
+#include <stdarg.h>
+#include <string.h>
 
-static std::string colorize(const std::string &str, size_t from, size_t len);
-template <size_t StaticBufSize = 4096>
-static std::string format(const char *format, ...)
-{
-    va_list list;
-    va_start(list, format);
-
-    char buffer[StaticBufSize];
-    const size_t size = ::vsnprintf(buffer, StaticBufSize, format, list);
-    assert(size >= 0);
-    std::string ret;
-    if (size < StaticBufSize) {
-        ret.assign(buffer, size);
-    } else {
-        ret.resize(size);
-        ::vsnprintf(&ret[0], size+1, format, copy);
-    }
-    va_end(list);
-    return ret;
-}
+std::string colorize(const std::string &str, size_t from, size_t len);
+std::string format(const char *format, ...);
 
 struct Token
 {
@@ -86,8 +70,8 @@ struct Token
     std::string context() const { return range.context(); }
     std::string toString() const
     {
-        return format("Type: %s %s Spelling: %s",
-                      typetoString(type), range.toString().c_str(), spelling().c_str());
+        return format("Type: %s %s Context: %s",
+                      typetoString(type), range.toString().c_str(), context().c_str());
 
     }
     bool operator==(char other) const

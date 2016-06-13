@@ -1,5 +1,6 @@
 #include "Lexer.h"
 #include <sys/stat.h>
+#include <limits.h>
 
 std::string colorize(const std::string &string, size_t from, size_t len)
 {
@@ -28,6 +29,25 @@ std::string colorize(const std::string &string, size_t from, size_t len)
     return ret;
 }
 
+std::string format(const char *format, ...)
+{
+    va_list list;
+    va_start(list, format);
+
+    enum { StaticBufSize = 4096 };
+    char buffer[StaticBufSize];
+    const size_t size = ::vsnprintf(buffer, StaticBufSize, format, list);
+    assert(size >= 0);
+    std::string ret;
+    if (size < StaticBufSize) {
+        ret.assign(buffer, size);
+    } else {
+        ret.resize(size);
+        ::vsnprintf(&ret[0], size+1, format, list);
+    }
+    va_end(list);
+    return ret;
+}
 
 SourceFile SourceFile::create(const std::string &path, bool *ok)
 {
@@ -52,12 +72,19 @@ SourceFile SourceFile::create(const std::string &path, bool *ok)
                 if (read != size) {
                     if (ok)
                         *ok = false;
-                    ret.code.clear();
-                    return ret;
+                    return SourceFile();
                 }
             }
+        } else {
+            if (ok)
+                *ok = false;
+            fclose(f);
+            return SourceFile();
         }
     }
+    if (ok)
+        *ok = true;
+
     ret.sourceFile = path;
 
     const char *ch = ret.code.c_str() + 1;
@@ -119,7 +146,7 @@ SourceFile SourceFile::create(const std::string &path, bool *ok)
     };
 
     auto processOperator = [&ch, &addToken]() {
-        static const String operators[] = {
+        static const std::string operators[] = {
             "reinterpret_cast", "dynamic_cast", "static_cast", "sizeof", "<<=",
             ">>=", "<<", ">>", ">=", "<=", "&&", "||", "++", "--", "==", "!=", "+=", "-=", "*=", "/=", "%=", "&=", "^=", "|=", "::", "->",
             "(", ")", "+", "-", "*", "/", "%", ">", "<", "!", "&", "|", "^", "=", "?", ":", ",", ".", "{", "}", "[", "]", ";"
@@ -130,7 +157,7 @@ SourceFile SourceFile::create(const std::string &path, bool *ok)
             addToken(Token::Type_Operator, ch - 1);
             return true;
         }
-        for (const String &str : operators) {
+        for (const std::string &str : operators) {
             if (!strncmp(ch, str.c_str(), str.length())) {
                 ch += str.length();
                 addToken(Token::Type_Operator, ch - str.length());
